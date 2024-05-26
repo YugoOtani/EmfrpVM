@@ -2,6 +2,10 @@
 Emfrp is an FRP language that runs on small-scale embedded systems.
 EmfrpVM is an Emfrp execution environment which provides REPL.
 
+# Requirements
+Tested Environment:
+* macOS 13 Ventura
+
 # How to build
 You need Rust environment for compiling the Emfrp program.
 Install in https://www.rust-lang.org/learn/get-started beforehand
