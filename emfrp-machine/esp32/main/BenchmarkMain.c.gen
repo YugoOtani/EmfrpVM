@@ -1,0 +1,11 @@
+#include "Benchmark.h"
+
+void Input(int* gpio16) {
+  /* Your code goes here... */
+}
+void Output(int* gpio5) {
+  /* Your code goes here... */
+}
+int main() {
+  ActivateBenchmark();
+}

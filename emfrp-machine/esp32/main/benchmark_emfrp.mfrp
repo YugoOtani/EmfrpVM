@@ -1,0 +1,15 @@
+module Benchmark
+in gpio16 : Bool
+out gpio5 : Bool
+use Std
+node a0: (Bool,Bool) = (True,gpio16)
+node a1: (Bool,(Bool,Bool)) = (True, a0)
+node a2: (Bool,(Bool,(Bool,Bool))) = (True,a1)
+node a3: (Bool,(Bool,(Bool,(Bool,Bool)))) = (True,a2)
+node a4: (Bool,(Bool,(Bool,(Bool,(Bool,Bool))))) = (True,a3)
+node a5: (Bool,(Bool,(Bool,(Bool,(Bool,(Bool,Bool)))))) = (True,a4)
+node a6: (Bool,(Bool,(Bool,(Bool,(Bool,(Bool,(Bool,Bool))))))) = (True,a5)
+node a7: (Bool,(Bool,(Bool,(Bool,(Bool,(Bool,(Bool,(Bool,Bool)))))))) = (True,a6)
+node a8: (Bool,(Bool,(Bool,(Bool,(Bool,(Bool,(Bool,(Bool,(Bool,Bool))))))))) = (True,a7)
+node a9: (Bool,(Bool,(Bool,(Bool,(Bool,(Bool,(Bool,(Bool,(Bool,(Bool,Bool)))))))))) = (True,a8)
+node gpio5: Bool = a9 of (x,y) -> {x}

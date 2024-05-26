@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"name": "microbit",
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"assert.h": "c",
+			"stdio.h": "c",
+			"array": "c",
+			"string": "c",
+			"string_view": "c",
+			"vector": "c"
+		}
+	}
+}

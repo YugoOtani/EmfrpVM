@@ -1,0 +1,14 @@
+[package]
+name = "emfrp-compiler"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies] 
+lalrpop = "0.20"
+
+[dependencies]
+lalrpop-util = { version = "0.20", features = ["lexer", "unicode"] }
+serial2 = "0.2.10"
+anyhow = "1.0.71"

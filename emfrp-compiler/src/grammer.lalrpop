@@ -1,0 +1,187 @@
+use crate::ast::*;
+use std::str::FromStr;
+grammar;
+
+pub Program : Program = {
+    <defs:(<Def>)+> => Program::Def(defs)
+}
+Def : Def = {
+    <v:VarDef> => Def::Var(v),
+    <t:TypeDef> => Def::Type(t)
+}
+
+pub VarDef : VarDef = {
+    "node" <name:Id> ":" <typ:TypeName>  "=" <val:Exp>
+        => VarDef::Node{name, typ, init:None, val},
+    "node" <name:Id> ":" <typ:TypeName> "init" "[" <init:Exp> "]"   "=" <val:Exp>
+        => VarDef::Node{name, typ, init:Some(init), val},
+    "node" "init" "["<init:Exp> "]" <name:Id> ":" <typ:TypeName> "=" <val:Exp> 
+        => VarDef::Node{name, typ, init:Some(init), val},
+    
+    "data" <name:Id> ":" <typ:TypeName> "=" <val:Exp> => VarDef::Data{typ,name,val},
+    "func" <name:Id> "(" <params:CommaList0<Param>> ")" "->" <ret:TypeName> "=" <body:Exp> //
+        => VarDef::Func{name,ret,params,body}
+}
+
+Param : (Id,TypeName) = {
+    <id:Id> ":" <typ:TypeName> => (id,typ)
+}
+pub TypeDef : TypeDef = {
+    "type" <name:TypeName> "=" <variants:PipeList1<Variant>> => TypeDef{name,variants}
+}
+Variant : Variant = {
+    <constructor:VariantName> => Variant{constructor,elems:vec![]},
+    <constructor:VariantName> "(" <elems:CommaList1<TypeName>> ")"=> Variant{constructor, elems}
+}
+pub Exp : Exp = {
+    <e:Term> "of" ":" <branches:(<Branch>)+> 
+     => Exp::Match(Box::new(e),branches),
+    "if" <cond:Term> "then"  <then:Exp>  "else"  <els:Exp>
+            => Exp::If{
+                cond:Box::new(cond),
+                then:Box::new(then),
+                els:Box::new(els)},
+    <t:Term> => Exp::Term(t),
+    <b:Block> => Exp::Block(b)
+}
+Branch : Branch = {
+    <pat:Pattern> "->" <exp:Block> => Branch{pat,exp}
+}
+Stmt : Stmt = {
+    <id:Id>":" <tname:TypeName> "=" <val:Exp> => Stmt{id,tname,val}
+}
+Pattern : Pattern = {
+    <i:I32> => Pattern::Int(i),
+    <id:Id> => Pattern::Id(id),
+    <bool:Bool> => Pattern::Bool(bool),
+    "_" => Pattern::None,
+    <name:VariantName> => Pattern::Variant(name,vec![]),
+    <name:VariantName> "(" <pats:CommaList1<Pattern>> ")" => Pattern::Variant(name,pats),
+    "(" <pats:CommaList1<Pattern>> ")" => Pattern::Tuple(pats)
+
+}
+Block : Block = {
+    "{" <stmt:(<Stmt> <EOL>)*> <exp:Exp> "}" => 
+    Block{stmt:stmt.into_iter().map(|s| s.0).collect(),exp:Box::new(exp)}
+}
+
+Term : Term = {
+    <log:Logical> => log
+}
+Logical : Logical = {
+    <log:Logical> "&&" <bit:BitWise> => Logical::And(Box::new(log),bit),
+    <log:Logical> "||" <bit:BitWise> => Logical::Or(Box::new(log), bit),
+    <bit:BitWise> => Logical::BitWise(bit)
+}
+BitWise : BitWise = {
+    <bit:BitWise> "&" <comp:Comp> => BitWise::And(Box::new(bit), comp),
+    <bit:BitWise> "|" <comp:Comp> => BitWise::Or(Box::new(bit), comp),
+    <bit:BitWise> "^" <comp:Comp> => BitWise::Xor(Box::new(bit), comp),
+    <comp:Comp> => BitWise::Comp(comp)
+}
+Comp : Comp = {
+    <comp:Comp> "==" <comp2:Comp2> => Comp::Eq(Box::new(comp), comp2),
+    <comp:Comp> "!=" <comp2:Comp2> => Comp::Eq(Box::new(comp), comp2),
+    <comp2:Comp2> => Comp::Comp2(comp2)
+}
+Comp2 : Comp2 = {
+    <comp2:Comp2> "<=" <shift:Shift> => Comp2::Leq(Box::new(comp2), shift),
+    <comp2:Comp2> "<" <shift:Shift> => Comp2::Ls(Box::new(comp2), shift),
+    <comp2:Comp2> ">=" <shift:Shift> => Comp2::Geq(Box::new(comp2), shift),
+    <comp2:Comp2> ">" <shift:Shift> => Comp2::Gt(Box::new(comp2), shift),
+    <shift:Shift> => Comp2::Shift(Box::new(shift)),
+}
+Shift : Shift = {
+    <shift:Shift> "<<" <add:Add> => Shift::Left(Box::new(shift),add),
+    <shift:Shift> ">>" <add:Add> => Shift::Right(Box::new(shift),add),
+    <add:Add> => Shift::Add(add)
+}
+Add : Add = {
+    <add:Add> "+" <fact:Factor> => Add::Plus(Box::new(add), fact),
+    <add:Add> "-" <fact:Factor> => Add::Minus(Box::new(add), fact),
+    <fact:Factor> => Add::Factor(fact)
+}
+Factor : Factor = {
+    <fact:Factor> "*" <unary:Unary> => Factor::Mul(Box::new(fact),unary),
+    <fact:Factor> "/" <unary:Unary> => Factor::Div(Box::new(fact),unary),
+    <fact:Factor> "%" <unary:Unary> => Factor::Mod(Box::new(fact),unary),
+    <unary:Unary> => Factor::Unary(unary)
+}
+Unary : Unary = {
+    "!" <prim:Primary> => Unary::Not(prim),
+    "-" <prim:Primary> => Unary::Minus(prim),
+    <prim:Primary> => Unary::Primary(prim)
+}
+Primary : Primary = {
+    <i:I32> => Primary::Int(i),
+    <b:Bool> => Primary::Bool(b),
+    "("<e:Exp>")" => Primary::Exp(Box::new(e)),
+    <id:Id> => Primary::Id(id),
+    <id:IdLast> => Primary::Last(id),
+    <var:VariantName> => Primary::Variant(var,vec![]),
+    <var:VariantName>"(" <v:CommaList1<Exp>> ")" => Primary::Variant(var,v),
+    "(" <v:CommaList2<Exp>> ")" => Primary::Tuple(v),
+    <name:Id>"(" <args:CommaList0<Exp>>")" => Primary::FnCall(name,args)
+}
+I32 : i32 = {
+    "0" => 0,
+    <i:r"[1-9][0-9]*"> => i32::from_str(i).unwrap()
+}
+Bool : bool = {
+    "true" => true,
+    "false" => false,
+    "True" => true,
+    "False" => false,
+}
+Id : Id = {
+    <s:r"[a-z][_a-zA-Z0-9]*"> => Id(s.to_string())
+}
+IdLast : Id = {
+    <s:r"[a-z][_a-zA-Z0-9]*@last"> => Id((&s[0..s.len()-5]).to_string())
+}
+VariantName : VariantName = {
+    <s:r"[A-Z][_a-zA-Z0-9]*"> => VariantName(s.to_string())
+}
+TypeName : TypeName = {
+    "Int" => TypeName::Int,
+    "Bool" => TypeName::Bool,
+    <s:r"[A-Z][_a-zA-Z0-9]*"> => TypeName::User(s.to_string()),
+    "(" <typs:CommaList1<TypeName>> ")" => TypeName::Tuple(typs)
+}
+
+EOL : () = {
+    "\n" => (),
+    "\r\n" => (),
+    "\r" => (),
+    ";" => ()
+}
+CommaList0<T>: Vec<T> = { 
+    <mut v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            v.push(e);
+            v
+        }
+    }
+};
+
+
+
+CommaList1<T>: Vec<T> = { 
+    <mut v:(<T> ",")*> <e:T> => {
+            v.push(e);
+            v
+    }
+};
+CommaList2<T>: Vec<T> = { 
+    <mut v:(<T> ",")+> <e:T> => {
+            v.push(e);
+            v
+    }
+};
+PipeList1<T>: Vec<T> = { 
+    <mut v:(<T> "|")*> <e:T> => {
+            v.push(e);
+            v
+    }
+};
